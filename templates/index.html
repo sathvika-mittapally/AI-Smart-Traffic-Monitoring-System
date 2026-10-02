@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Monitoring System</title>
+    <!-- Standard Clean Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-traffic-light"></i>
+                </div>
+                <div>
+                    <h1 class="brand-title">Smart Traffic Monitoring System</h1>
+                    <p class="brand-subtitle">Real-time density analysis, adaptive signal timing, and incident detection</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="status-tag active">
+                    <span class="dot"></span> System Online
+                </div>
+                <div class="status-tag" id="mode-badge">
+                    Mode: <span id="current-mode-label">Autonomous AI</span>
+                </div>
+                <div class="clock" id="system-clock">--:--:--</div>
+            </div>
+        </header>
+
+        <!-- Emergency Preemption Alert (Minimalist) -->
+        <div id="emergency-banner" class="alert-banner hidden">
+            <div class="alert-inner">
+                <i class="fa-solid fa-truck-medical"></i>
+                <span id="emergency-banner-text">Emergency vehicle detected. Green wave preemption active on approach lane.</span>
+            </div>
+        </div>
+
+        <!-- Metrics Overview Grid -->
+        <section class="metrics-grid">
+            <div class="card metric-card">
+                <span class="metric-label">Active Vehicles</span>
+                <div class="metric-value" id="stat-active-vehicles">0</div>
+                <span class="metric-footnote" id="stat-total-vehicles">Processed: 0</span>
+            </div>
+
+            <div class="card metric-card">
+                <span class="metric-label">Average Speed</span>
+                <div class="metric-value" id="stat-avg-speed">0.0 <span class="unit">km/h</span></div>
+                <span class="metric-footnote" id="stat-speed-limit">Urban limit: 60 km/h</span>
+            </div>
+
+            <div class="card metric-card">
+                <span class="metric-label">Congestion Index</span>
+                <div class="metric-value" id="stat-congestion">0%</div>
+                <div class="progress-track">
+                    <div class="progress-bar" id="stat-congestion-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="card metric-card">
+                <span class="metric-label">Carbon Saved</span>
+                <div class="metric-value" id="stat-co2">0.00 <span class="unit">kg CO2</span></div>
+                <span class="metric-footnote" id="stat-wait-saved">Wait reduced: 0s</span>
+            </div>
+
+            <div class="card metric-card">
+                <span class="metric-label">Safety Incidents</span>
+                <div class="metric-value" id="stat-violations">0</div>
+                <span class="metric-footnote text-muted">Audited & Logged</span>
+            </div>
+        </section>
+
+        <!-- Main Content Area -->
+        <div class="grid-main">
+            
+            <!-- Left: Video Stream & Source Controls -->
+            <div class="col-stream">
+                <div class="card stream-card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fa-solid fa-video"></i> Live Camera Feed</span>
+                        <span class="feed-source-pill" id="current-source-tag">Source: Normal Traffic</span>
+                    </div>
+
+                    <div class="stream-container">
+                        <img id="live-video-stream" src="/video_feed" alt="Traffic Video Stream">
+                        <div class="stream-tag top-left">Camera 01</div>
+                        <div class="stream-tag bottom-left">30 FPS</div>
+                    </div>
+
+                    <div class="stream-controls">
+                        <div class="control-field">
+                            <label for="scenario-select">Traffic Scenario:</label>
+                            <select id="scenario-select" class="form-select" onchange="changeVideoSource(this.value)">
+                                <option value="normal">Standard Mixed Flow</option>
+                                <option value="heavy">Rush Hour Congestion</option>
+                                <option value="ambulance">Emergency Ambulance (Green Wave)</option>
+                                <option value="webcam">Live USB Camera</option>
+                            </select>
+                        </div>
+
+                        <label class="btn-secondary file-btn">
+                            <i class="fa-solid fa-upload"></i> Upload Video
+                            <input type="file" id="video-upload-input" accept="video/mp4,video/avi" onchange="uploadCustomVideo(this)" style="display:none;">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Intersection Operation Controls -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fa-solid fa-sliders"></i> Signal Controls</span>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-primary active btn-ai-mode" onclick="setSystemMode('AUTONOMOUS_AI')">
+                            Autonomous AI
+                        </button>
+                        <button class="btn btn-secondary btn-manual-mode" onclick="setSystemMode('MANUAL_OVERRIDE')">
+                            Manual Control
+                        </button>
+                        <button class="btn btn-danger" onclick="triggerManualEmergency()">
+                            Emergency Priority
+                        </button>
+                    </div>
+
+                    <div class="manual-row" id="manual-phase-row" style="display: none;">
+                        <span class="subtext">Manual Phase Selection:</span>
+                        <button class="btn btn-sm btn-secondary" onclick="switchManualPhase('NS')">Green: North-South</button>
+                        <button class="btn btn-sm btn-secondary" onclick="switchManualPhase('EW')">Green: East-West</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Intersection Schematic & Lane Density -->
+            <div class="col-signals">
+                
+                <!-- 4-Way Intersection Schematic -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fa-solid fa-diagram-project"></i> 4-Way Junction Signal Status</span>
+                        <span class="phase-pill" id="signal-phase-badge">Phase: NS (25s)</span>
+                    </div>
+
+                    <div class="intersection-schematic">
+                        <!-- North -->
+                        <div class="pole pole-n">
+                            <span class="pole-name">North</span>
+                            <div class="light-stack" id="light-north">
+                                <div class="lamp red active"></div>
+                                <div class="lamp yellow"></div>
+                                <div class="lamp green"></div>
+                            </div>
+                            <span class="density-num" id="density-north">0.0</span>
+                        </div>
+
+                        <!-- Center Timer -->
+                        <div class="junction-hub">
+                            <div class="hub-timer" id="center-timer-text">25</div>
+                            <span class="hub-label">Sec</span>
+                        </div>
+
+                        <!-- West -->
+                        <div class="pole pole-w">
+                            <span class="pole-name">West</span>
+                            <div class="light-stack" id="light-west">
+                                <div class="lamp red"></div>
+                                <div class="lamp yellow"></div>
+                                <div class="lamp green active"></div>
+                            </div>
+                            <span class="density-num" id="density-west">0.0</span>
+                        </div>
+
+                        <!-- East -->
+                        <div class="pole pole-e">
+                            <span class="pole-name">East</span>
+                            <div class="light-stack" id="light-east">
+                                <div class="lamp red"></div>
+                                <div class="lamp yellow"></div>
+                                <div class="lamp green active"></div>
+                            </div>
+                            <span class="density-num" id="density-east">0.0</span>
+                        </div>
+
+                        <!-- South -->
+                        <div class="pole pole-s">
+                            <span class="pole-name">South</span>
+                            <div class="light-stack" id="light-south">
+                                <div class="lamp red active"></div>
+                                <div class="lamp yellow"></div>
+                                <div class="lamp green"></div>
+                            </div>
+                            <span class="density-num" id="density-south">0.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lane Density Bars -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="fa-solid fa-bars-progress"></i> Approach Lane Density</span>
+                    </div>
+
+                    <div class="lane-list">
+                        <div class="lane-item">
+                            <span class="lane-label">North</span>
+                            <div class="track"><div class="fill" id="bar-north" style="width: 20%;"></div></div>
+                            <span class="lane-val" id="val-north">0 veh</span>
+                        </div>
+                        <div class="lane-item">
+                            <span class="lane-label">South</span>
+                            <div class="track"><div class="fill" id="bar-south" style="width: 20%;"></div></div>
+                            <span class="lane-val" id="val-south">0 veh</span>
+                        </div>
+                        <div class="lane-item">
+                            <span class="lane-label">East</span>
+                            <div class="track"><div class="fill" id="bar-east" style="width: 20%;"></div></div>
+                            <span class="lane-val" id="val-east">0 veh</span>
+                        </div>
+                        <div class="lane-item">
+                            <span class="lane-label">West</span>
+                            <div class="track"><div class="fill" id="bar-west" style="width: 20%;"></div></div>
+                            <span class="lane-val" id="val-west">0 veh</span>
+                        </div>
+                    </div>
+
+                    <div class="speed-config-row">
+                        <span class="subtext">Speed Limit Threshold:</span>
+                        <div class="input-inline">
+                            <input type="number" id="speed-limit-input" value="60" min="20" max="140" step="5">
+                            <span>km/h</span>
+                            <button class="btn btn-sm btn-secondary" onclick="updateSpeedLimit()">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <section class="charts-grid">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Vehicle Composition</span></div>
+                <div class="chart-box">
+                    <canvas id="vehicleClassChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><span class="card-title">Real-Time Flow Rate</span></div>
+                <div class="chart-box">
+                    <canvas id="trafficFlowChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><span class="card-title">Waiting Delay: AI vs Fixed-Time</span></div>
+                <div class="chart-box">
+                    <canvas id="delayComparisonChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Incident & Violations Log Table -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="fa-solid fa-list-check"></i> Safety Incidents & Violation Records</span>
+                <div class="header-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="downloadJSONReport()">Export JSON</button>
+                    <button class="btn btn-sm btn-secondary" onclick="downloadCSVReport()">Export CSV</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Incident ID</th>
+                            <th>Timestamp</th>
+                            <th>Vehicle</th>
+                            <th>Category</th>
+                            <th>Speed</th>
+                            <th>Violation Type</th>
+                            <th>Severity</th>
+                            <th>Evidence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="violations-tbody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No safety violations recorded. Traffic flow is compliant.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Smart Traffic Monitoring System &bull; Academic Project</span>
+            <span>Edge Vision &bull; D:\ Drive Local Deployment</span>
+        </footer>
+
+    </div>
+
+    <!-- Snapshot Modal -->
+    <div id="snapshot-modal" class="modal" onclick="closeSnapshotModal()">
+        <div class="modal-dialog" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span class="modal-title">Incident Evidence Snapshot</span>
+                <button class="btn-close" onclick="closeSnapshotModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <img id="modal-img" src="" alt="Evidence">
+                <p id="modal-caption" class="subtext"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

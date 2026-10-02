@@ -1,0 +1,30 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Temporary uploads & OS files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Large local video files (optional ignore if user uploads big files)
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Violation snapshots generated during local testing
+data/violations/*.jpg
+!data/violations/.gitkeep
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
